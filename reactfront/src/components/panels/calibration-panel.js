@@ -62,8 +62,10 @@ export default function CalibrationPanel() {
     });
     
     // Check if we have all required fields
-    const requiredFields = sensorKey === 'lox_cryo' 
+    const requiredFields = sensorKey === 'lox_cryo'
         ? ['minFlow', 'maxFlow', 'minVolts', 'maxVolts', 'kFactor']
+        : (sensorKey === 'eth_temp' || sensorKey === 'lox_temp')
+        ? ['offset']
         : ['barMax', 'zero', 'span'];
     
     const missingFields = requiredFields.filter(field => !(field in cleanedSensor));
@@ -101,7 +103,9 @@ export default function CalibrationPanel() {
         { key: 'lox_tank', name: 'LOX Tank Pressure' },
         { key: 'eth_n2', name: 'ETH N2 Pressure' },
         { key: 'lox_n2', name: 'LOX N2 Pressure' },
-        { key: 'lox_cryo', name: 'LOX Cryo Flow' }
+        { key: 'lox_cryo', name: 'LOX Cryo Flow' },
+        { key: 'eth_temp', name: 'ETH Temperature' },
+        { key: 'lox_temp', name: 'LOX Temperature' },
     ];
 
     const getSensorName = (sensorKey) => {
@@ -223,6 +227,40 @@ export default function CalibrationPanel() {
         );
     };
 
+    const renderTemperatureSensor = (sensorKey) => {
+        const sensor = calibration[sensorKey];
+        const defaultSensor = defaultSensorCalibration[sensorKey];
+
+        return (
+            <div style={{ padding: '10px', border: '1px solid #ccc', marginBottom: '10px' }}>
+                <h3>{getSensorName(sensorKey)}</h3>
+                <p style={{ fontSize: '13px', color: '#555', marginTop: 0 }}>
+                    The MAX6675 outputs temperature directly in °C. Use the offset to correct for a known bias (e.g. <code>+2.5</code> adds 2.5°C to every reading).
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '150px 150px', gap: '10px' }}>
+                    <label>Offset (°C):</label>
+                    <input
+                        type="number"
+                        step="0.1"
+                        value={sensor.offset}
+                        onChange={(e) => handleUpdate(sensorKey, 'offset', e.target.value)}
+                    />
+                </div>
+                <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                    <Button variant="contained" color="primary" onClick={() => handleSave(sensorKey)}>
+                        Save
+                    </Button>
+                    <Button variant="contained" onClick={() => handleReset(sensorKey)}>
+                        Reset to Default
+                    </Button>
+                </div>
+                <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+                    <strong>Default:</strong> offset={defaultSensor.offset}°C
+                </div>
+            </div>
+        );
+    };
+
     return (
         <Panel title="Sensor Calibration" className='panel calibration'>
             <div style={{ padding: '20px' }}>
@@ -249,8 +287,10 @@ export default function CalibrationPanel() {
                     ))}
                 </div>
 
-                {selectedSensor === 'lox_cryo' 
+                {selectedSensor === 'lox_cryo'
                     ? renderFlowSensor(selectedSensor)
+                    : (selectedSensor === 'eth_temp' || selectedSensor === 'lox_temp')
+                    ? renderTemperatureSensor(selectedSensor)
                     : renderPressureSensor(selectedSensor)
                 }
             </div>

@@ -65,9 +65,11 @@ export const defaultSensorCalibration = {
     },
     eth_temp: {
         type: 'temperature',
+        offset: 0.0,
     },
     lox_temp: {
         type: 'temperature',
+        offset: 0.0,
     },
 }
 

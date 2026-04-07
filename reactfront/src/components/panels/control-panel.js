@@ -90,7 +90,7 @@ function ControlCard({ state, emit, sensorBatches, sensorAverages, updateSensorH
 
         if (sensor) {
             if (sensor.type === 'temperature') {
-                currentValue = state.data.labjacks[props.test_stand]["temperature"] ?? null;
+                currentValue = (state.data.labjacks[props.test_stand]["temperature"] ?? 0.0) + (sensor.offset || 0.0);
                 unit = '°C';
             } else {
                 volts = state.data.labjacks[props.test_stand]["analog"][props.labjack_pin]
