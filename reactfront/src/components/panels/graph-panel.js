@@ -30,8 +30,10 @@ export function pinFromID(labjack_pin, test_stand = null) {
 // We store yBounds persistently to interpolate between ranges smoothly
 let pressureYBounds = null
 let flowYBounds = null
+let tempYBounds = null
 const minPressureYBounds = [-0.7, 0.7]  // bar (converted from -10, 10 psi)
 const minFlowYBounds = [-0.2, 0.2]  // LPS
+const minTempYBounds = [-5, 5]  // °C
 
 
 // newData({ time: epoch_secs, series1: value1, ... })
@@ -511,73 +513,78 @@ const FlowDatalogger = Datalogger({
   },
 })
 
+// Create temperature datalogger (ETH and LOX thermocouples)
+const TemperatureDatalogger = Datalogger({
+  unit: '°C',
+  label: 'Temperature',
+  yBoundsRef: { current: tempYBounds },
+  minYBoundsRef: minTempYBounds,
+  series: {
+    'ETH Temp': { color: '#e67e00' }, // Orange for ETH
+    'LOX Temp': { color: '#0077cc' }, // Blue for LOX
+  },
+})
+
 export default function GraphPanel({ state }) {
-  // State to toggle between pressure and flow view
-  const [showPressure, setShowPressure] = React.useState(true);
+  // 'pressure' | 'flow' | 'temperature'
+  const [activeTab, setActiveTab] = React.useState('pressure');
+
+  const tabs = [
+    { id: 'pressure', label: 'Pressure Sensors', subtitle: 'Pressure Sensors (Bar)' },
+    { id: 'flow',     label: 'Flow Sensors',     subtitle: 'Flow Sensors (LPS)' },
+    { id: 'temperature', label: 'Temperature Sensors', subtitle: 'Temperature Sensors (°C)' },
+  ];
 
   // Instead of using a cumbersome charting library, we use JSX with SVG to declaratively
   // and efficiently construct highly customisable graphs
   return (
-    <Panel title="Graphs" className='panel graphs' style={{ 
-        maxWidth: '1000px',  // Adjust this value as needed
-        width: '800px',     // Or use fixed width
-        height: '650px',    // Back to original height since we're only showing one graph
+    <Panel title="Graphs" className='panel graphs' style={{
+        maxWidth: '1000px',
+        width: '800px',
+        height: '650px',
         overflow: 'hidden'
       }}>
       {/* Toggle buttons */}
-      <div style={{ 
-        marginBottom: '15px', 
-        display: 'flex', 
-        gap: '10px', 
+      <div style={{
+        marginBottom: '15px',
+        display: 'flex',
+        gap: '10px',
         alignItems: 'center',
         paddingBottom: '10px',
         borderBottom: '1px solid #ddd'
       }}>
-        <button 
-          onClick={() => setShowPressure(true)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: showPressure ? '#2196f3' : '#f5f5f5',
-            color: showPressure ? 'white' : '#333',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: showPressure ? 'bold' : 'normal'
-          }}
-        >
-          Pressure Sensors
-        </button>
-        <button 
-          onClick={() => setShowPressure(false)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: !showPressure ? '#2196f3' : '#f5f5f5',
-            color: !showPressure ? 'white' : '#333',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: !showPressure ? 'bold' : 'normal'
-          }}
-        >
-          Flow Sensors
-        </button>
-        <span style={{ 
-          marginLeft: '20px', 
-          fontSize: '16px', 
-          fontWeight: 'bold',
-          color: '#666'
-        }}>
-          {showPressure ? 'Pressure Sensors (Bar)' : 'Flow Sensors (LPS)'}
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: activeTab === tab.id ? '#2196f3' : '#f5f5f5',
+              color: activeTab === tab.id ? 'white' : '#333',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: activeTab === tab.id ? 'bold' : 'normal'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+        <span style={{ marginLeft: '20px', fontSize: '16px', fontWeight: 'bold', color: '#666' }}>
+          {tabs.find(t => t.id === activeTab)?.subtitle}
         </span>
       </div>
 
       {/* Conditionally render the appropriate graph */}
-      {showPressure ? (
+      {activeTab === 'pressure' && (
         <PressureDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
-      ) : (
+      )}
+      {activeTab === 'flow' && (
         <FlowDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
+      )}
+      {activeTab === 'temperature' && (
+        <TemperatureDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
       )}
     </Panel>
   )

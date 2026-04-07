@@ -186,6 +186,8 @@ export function formatDataPoint(dict) {
         'ETH Tank': getBar(dict.labjacks.ETH.analog["4"], sensorData.eth_tank.barMax, sensorData.eth_tank.zero, sensorData.eth_tank.span),
         'ETH N2': getBar(dict.labjacks.ETH.analog["5"], sensorData.eth_n2.barMax, sensorData.eth_n2.zero, sensorData.eth_n2.span),
         'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow), // Flow sensor in LPS
+        'ETH Temp': (dict.labjacks.ETH.temperature ?? 0.0) + (sensorData.eth_temp.offset || 0.0),
+        'LOX Temp': (dict.labjacks.LOX.temperature ?? 0.0) + (sensorData.lox_temp.offset || 0.0),
     }
 }
 
@@ -195,6 +197,8 @@ export const emptyDataPoint = {
     'LOX N2': NaN,
     'ETH Tank': NaN,
     'ETH N2': NaN,
+    'ETH Temp': NaN,
+    'LOX Temp': NaN,
 }
 
 //previous fixed calibration data
