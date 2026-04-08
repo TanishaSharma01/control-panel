@@ -1,11 +1,8 @@
 import { Switch } from '@material-ui/core';
 import React, { useState, useEffect, useCallback } from 'react';
-import { getBar, getLPS, sensorData } from '../../utils';
+import { getBar, getLPS, sensorData, SENSOR_BATCH_SIZE } from '../../utils';
 import { Panel } from '../index'
 import pins from '../../pins.json'
-
-// Rolling window size: 10 samples at 20Hz = 0.5s smoothing, updates every reading
-const ROLLING_WINDOW_SIZE = 10;
 
 function normalisePosition(num) {
     return num * 26;
@@ -110,12 +107,14 @@ function ControlCard({ state, emit, sensorBatches, sensorAverages, updateSensorH
         }
     }
 
-    // Update sensor history only when currentValue changes
+    // Update sensor history on every new data point (keyed on timestamp, not value)
+    // so that repeated identical values (e.g. 0.0 flow when clipped) still get batched.
+    const dataTime = state.data?.time;
     useEffect(() => {
         if (currentValue !== null && currentValue !== undefined && !isNaN(currentValue)) {
             updateSensorHistory(sensorKey, currentValue);
         }
-    }, [currentValue, sensorKey, updateSensorHistory]);
+    }, [dataTime, sensorKey, updateSensorHistory]);
 
     // Use stored average if available, otherwise use current value
     const storedAverage = sensorAverages[sensorKey];
@@ -177,33 +176,40 @@ export default function ControlPanel({ state, emit }) {
     const [sensorAverages, setSensorAverages] = useState({}); // Current display averages
     const [showIgniterConfirm, setShowIgniterConfirm] = useState(false);
 
-    // Function to update sensor history using a rolling window average.
-    // Every new reading shifts the oldest out and updates the display immediately,
-    // so the display reflects the last 0.5s of data on every incoming sample.
+    // Function to update sensor history
     const updateSensorHistory = useCallback((sensorKey, newValue) => {
         if (newValue === null || newValue === undefined || isNaN(newValue)) {
             return; // Skip invalid values
         }
 
         setSensorBatches(prev => {
-            const currentBuffer = prev[sensorKey] || [];
-            const newBuffer = [...currentBuffer, newValue];
-            if (newBuffer.length > ROLLING_WINDOW_SIZE) {
-                newBuffer.shift(); // drop the oldest reading
+            const currentBatch = prev[sensorKey] || [];
+            const newBatch = [...currentBatch, newValue];
+
+            // If we've collected a full batch, calculate average and reset
+            if (newBatch.length >= SENSOR_BATCH_SIZE) {
+                const average = newBatch.reduce((sum, val) => sum + val, 0) / newBatch.length;
+
+                // Update the display average
+                setSensorAverages(prevAvg => ({
+                    ...prevAvg,
+                    [sensorKey]: {
+                        value: average,
+                        count: newBatch.length
+                    }
+                }));
+
+                // Reset batch
+                return {
+                    ...prev,
+                    [sensorKey]: []
+                };
             }
 
-            const average = newBuffer.reduce((sum, val) => sum + val, 0) / newBuffer.length;
-            setSensorAverages(prevAvg => ({
-                ...prevAvg,
-                [sensorKey]: {
-                    value: average,
-                    count: newBuffer.length
-                }
-            }));
-
+            // Continue collecting values
             return {
                 ...prev,
-                [sensorKey]: newBuffer
+                [sensorKey]: newBatch
             };
         });
     }, []);

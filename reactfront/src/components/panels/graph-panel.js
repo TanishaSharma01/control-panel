@@ -497,8 +497,10 @@ const PressureDatalogger = Datalogger({
   series: {
     'LOX Tank': { color: '#000' },
     'LOX N2': { color: '#f00' },
+    'LOX Inlet': { color: '#66f' },
     'ETH Tank': { color: '#3d6' },
     'ETH N2': { color: '#09f' },
+    'ETH Inlet': { color: '#f90' },
   },
 })
 

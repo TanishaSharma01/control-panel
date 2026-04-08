@@ -54,6 +54,16 @@ export const defaultSensorCalibration = {
         zero: 4,
         span: 16,
     },
+    lox_inlet: {
+        barMax: 150,
+        zero: 3.99,
+        span: 16.04,
+    },
+    eth_inlet: {
+        barMax: 150,
+        zero: 3.99,
+        span: 16.02,
+    },
     lox_cryo: {
         minFlow: 0.050472,  // LPS (was 0.80 GPM)
         maxFlow: 1.82961,   // LPS (was 29.00 GPM)
@@ -71,8 +81,12 @@ export const defaultSensorCalibration = {
     },
 }
 
-// Load calibration from localStorage or use defaults
-export let sensorData = JSON.parse(localStorage.getItem('sensorCalibration')) || { ...defaultSensorCalibration };
+// Load calibration from localStorage, merged with defaults so newly added sensors
+// are always present even when an older localStorage snapshot is loaded.
+export let sensorData = {
+    ...defaultSensorCalibration,
+    ...(JSON.parse(localStorage.getItem('sensorCalibration')) || {}),
+};
 
 // Function to update and save calibration
 export function updateSensorCalibration(sensorKey, newCalibration) {
@@ -181,9 +195,11 @@ export function formatDataPoint(dict) {
         // Note: these bar max figures are also in the sensors list in control-panel.js
         'LOX Tank': getBar(dict.labjacks.LOX.analog["4"], sensorData.lox_tank.barMax, sensorData.lox_tank.zero, sensorData.lox_tank.span),
         'LOX N2': getBar(dict.labjacks.LOX.analog["5"], sensorData.lox_n2.barMax, sensorData.lox_n2.zero, sensorData.lox_n2.span),
+        'LOX Inlet': getBar(dict.labjacks.LOX.analog["7"], sensorData.lox_inlet.barMax, sensorData.lox_inlet.zero, sensorData.lox_inlet.span),
         'ETH Tank': getBar(dict.labjacks.ETH.analog["4"], sensorData.eth_tank.barMax, sensorData.eth_tank.zero, sensorData.eth_tank.span),
         'ETH N2': getBar(dict.labjacks.ETH.analog["5"], sensorData.eth_n2.barMax, sensorData.eth_n2.zero, sensorData.eth_n2.span),
-        'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow, sensorData.lox_cryo.minVolts, sensorData.lox_cryo.maxVolts), 
+        'ETH Inlet': getBar(dict.labjacks.ETH.analog["7"], sensorData.eth_inlet.barMax, sensorData.eth_inlet.zero, sensorData.eth_inlet.span),
+        'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow, sensorData.lox_cryo.minVolts, sensorData.lox_cryo.maxVolts),
         'ETH Temp': (dict.labjacks.ETH.temperature ?? 0.0) + (sensorData.eth_temp.offset || 0.0),
         'LOX Temp': (dict.labjacks.LOX.temperature ?? 0.0) + (sensorData.lox_temp.offset || 0.0),
     }
@@ -193,8 +209,10 @@ export const emptyDataPoint = {
     time: NaN,
     'LOX Tank': NaN,
     'LOX N2': NaN,
+    'LOX Inlet': NaN,
     'ETH Tank': NaN,
     'ETH N2': NaN,
+    'ETH Inlet': NaN,
     'ETH Temp': NaN,
     'LOX Temp': NaN,
 }

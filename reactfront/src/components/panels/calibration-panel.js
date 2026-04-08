@@ -103,6 +103,8 @@ export default function CalibrationPanel() {
         { key: 'lox_tank', name: 'LOX Tank Pressure' },
         { key: 'eth_n2', name: 'ETH N2 Pressure' },
         { key: 'lox_n2', name: 'LOX N2 Pressure' },
+        { key: 'eth_inlet', name: 'ETH Motor Inlet Pressure' },
+        { key: 'lox_inlet', name: 'LOX Motor Inlet Pressure' },
         { key: 'lox_cryo', name: 'LOX Cryo Flow' },
         { key: 'eth_temp', name: 'ETH Temperature' },
         { key: 'lox_temp', name: 'LOX Temperature' },
