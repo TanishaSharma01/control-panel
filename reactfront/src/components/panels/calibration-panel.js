@@ -63,7 +63,7 @@ export default function CalibrationPanel() {
     
     // Check if we have all required fields
     const requiredFields = sensorKey === 'lox_cryo'
-        ? ['minFlow', 'maxFlow', 'minVolts', 'maxVolts', 'kFactor']
+        ? ['minFlow', 'maxFlow', 'minVolts', 'maxVolts']
         : (sensorKey === 'eth_temp' || sensorKey === 'lox_temp')
         ? ['offset']
         : ['barMax', 'zero', 'span'];
@@ -201,14 +201,6 @@ export default function CalibrationPanel() {
                         value={sensor.maxVolts}
                         onChange={(e) => handleUpdate(sensorKey, 'maxVolts', e.target.value)}
                     />
-                    
-                    <label>K-Factor:</label>
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={sensor.kFactor}
-                        onChange={(e) => handleUpdate(sensorKey, 'kFactor', e.target.value)}
-                    />
                 </div>
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                     <Button variant="contained" color="primary" onClick={() => handleSave(sensorKey)}>
@@ -221,7 +213,6 @@ export default function CalibrationPanel() {
                 <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
                     <strong>Defaults:</strong> minFlow={defaultSensor.minFlow.toFixed(6)}LPS, 
                     maxFlow={defaultSensor.maxFlow.toFixed(6)}LPS, 
-                    kFactor={defaultSensor.kFactor}
                 </div>
             </div>
         );

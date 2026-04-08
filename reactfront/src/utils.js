@@ -14,13 +14,13 @@ export function getBar(volts, barMax, zero, span) {
 }
 
 // Convert voltage to flow rate in GPM for flow sensors
-export function getGPM(volts, minFlow, maxFlow, minVolts = 0.0, maxVolts = 5.0) {
-    // Linear interpolation between voltage range and flow range
-    const voltageRange = maxVolts - minVolts;
-    const flowRange = maxFlow - minFlow;
-    const gpm = ((volts - minVolts) / voltageRange) * flowRange + minFlow;
-    return Math.max(0, gpm); // Don't allow negative flow
-}
+// export function getGPM(volts, minFlow, maxFlow, minVolts = 0.0, maxVolts = 5.0) {
+//     // Linear interpolation between voltage range and flow range
+//     const voltageRange = maxVolts - minVolts;
+//     const flowRange = maxFlow - minFlow;
+//     const gpm = ((volts - minVolts) / voltageRange) * flowRange + minFlow;
+//     return Math.max(0, gpm); // Don't allow negative flow
+// }
 
 // Convert voltage to flow rate in LPS (Litres Per Second) for flow sensors
 export function getLPS(volts, minFlow, maxFlow, minVolts = 0.0, maxVolts = 5.0) {
@@ -57,11 +57,9 @@ export const defaultSensorCalibration = {
     lox_cryo: {
         minFlow: 0.050472,  // LPS (was 0.80 GPM)
         maxFlow: 1.82961,   // LPS (was 29.00 GPM)
-        minVolts: 0.0,
-        maxVolts: 5.0,
-        type: 'flow',
-        kFactor: 1686.86990,
-        serialNumber: '130228-06'
+        minVolts: 0.88,
+        maxVolts: 4.4,
+        type: 'flow'
     },
     eth_temp: {
         type: 'temperature',
@@ -185,7 +183,7 @@ export function formatDataPoint(dict) {
         'LOX N2': getBar(dict.labjacks.LOX.analog["5"], sensorData.lox_n2.barMax, sensorData.lox_n2.zero, sensorData.lox_n2.span),
         'ETH Tank': getBar(dict.labjacks.ETH.analog["4"], sensorData.eth_tank.barMax, sensorData.eth_tank.zero, sensorData.eth_tank.span),
         'ETH N2': getBar(dict.labjacks.ETH.analog["5"], sensorData.eth_n2.barMax, sensorData.eth_n2.zero, sensorData.eth_n2.span),
-        'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow), // Flow sensor in LPS
+        'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow, sensorData.lox_cryo.minVolts, sensorData.lox_cryo.maxVolts), 
         'ETH Temp': (dict.labjacks.ETH.temperature ?? 0.0) + (sensorData.eth_temp.offset || 0.0),
         'LOX Temp': (dict.labjacks.LOX.temperature ?? 0.0) + (sensorData.lox_temp.offset || 0.0),
     }
@@ -233,9 +231,7 @@ export const emptyDataPoint = {
 //         maxFlow: 29.00, // GPM
 //         minVolts: 0.0,
 //         maxVolts: 5.0,
-//         type: 'flow',
-//         kFactor: 1686.86990, // from calibration sheet
-//         serialNumber: '130228-06',
+//         type: 'flow'
 //         // LPS conversion values for display
 //         minFlowLPS: 0.80 * 0.06309, // ~0.050 LPS
 //         maxFlowLPS: 29.00 * 0.06309, // ~1.830 LPS

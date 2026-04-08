@@ -23,6 +23,10 @@ class App extends React.Component {
       socketStatus: -1,
     }
     this.emit = this.emit.bind(this)
+    // Rolling average buffer for LOX Flow to suppress noise spikes before graphing.
+    // 10 samples at 20Hz = 0.5s smoothing window.
+    this.loxFlowBuffer = []
+    this.LOX_FLOW_BUFFER_SIZE = 10
     this.connect()
   }
   componentDidMount() {
@@ -80,8 +84,23 @@ class App extends React.Component {
           let stateTime = undefOnBadRef(() => this.state.data.time)
           if (data.data.time - stateTime > 1) {
             newData(emptyDataPoint)
+            this.loxFlowBuffer = [] // reset averaging buffer on segment break
           }
-          newData(formatDataPoint(data.data))
+          const dataPoint = formatDataPoint(data.data)
+
+          // Rolling average for LOX Flow: buffer the last N readings and send
+          // the mean to the graph so electrical noise spikes are suppressed.
+          if (!isNaN(dataPoint['LOX Flow'])) {
+            this.loxFlowBuffer.push(dataPoint['LOX Flow'])
+            if (this.loxFlowBuffer.length > this.LOX_FLOW_BUFFER_SIZE) {
+              this.loxFlowBuffer.shift()
+            }
+          }
+          if (this.loxFlowBuffer.length > 0) {
+            dataPoint['LOX Flow'] = this.loxFlowBuffer.reduce((a, b) => a + b, 0) / this.loxFlowBuffer.length
+          }
+
+          newData(dataPoint)
           this.setState({ data: data.data })
           if (data.data.latest_warning) {
             this.pushWarning(data.data.latest_warning[0], data.data.latest_warning[1])
