@@ -30,9 +30,11 @@ export function pinFromID(labjack_pin, test_stand = null) {
 // We store yBounds persistently to interpolate between ranges smoothly
 let pressureYBounds = null
 let flowYBounds = null
+let rawFlowYBounds = null
 let tempYBounds = null
 const minPressureYBounds = [-0.7, 0.7]  // bar (converted from -10, 10 psi)
 const minFlowYBounds = [-0.2, 0.2]  // LPS
+const minRawFlowYBounds = [-0.1, 0.1]  // V
 const minTempYBounds = [-5, 5]  // °C
 
 
@@ -515,6 +517,17 @@ const FlowDatalogger = Datalogger({
   },
 })
 
+// Create raw voltage datalogger for cryo flow sensor (no processing)
+const RawFlowDatalogger = Datalogger({
+  unit: 'V',
+  label: 'Flow 2',
+  yBoundsRef: { current: rawFlowYBounds },
+  minYBoundsRef: minRawFlowYBounds,
+  series: {
+    'LOX Flow Raw': { color: '#8B4513' },
+  },
+})
+
 // Create temperature datalogger (ETH and LOX thermocouples)
 const TemperatureDatalogger = Datalogger({
   unit: '°C',
@@ -532,8 +545,9 @@ export default function GraphPanel({ state }) {
   const [activeTab, setActiveTab] = React.useState('pressure');
 
   const tabs = [
-    { id: 'pressure', label: 'Pressure Sensors', subtitle: 'Pressure Sensors (Bar)' },
-    { id: 'flow',     label: 'Flow Sensors',     subtitle: 'Flow Sensors (LPS)' },
+    { id: 'pressure',  label: 'Pressure Sensors',  subtitle: 'Pressure Sensors (Bar)' },
+    { id: 'flow',      label: 'Flow Sensors',       subtitle: 'Flow Sensors (LPS)' },
+    { id: 'flow2',     label: 'Flow Voltage',      subtitle: 'Flow 2 - Raw Voltage (V)' },
     { id: 'temperature', label: 'Temperature Sensors', subtitle: 'Temperature Sensors (°C)' },
   ];
 
@@ -584,6 +598,9 @@ export default function GraphPanel({ state }) {
       )}
       {activeTab === 'flow' && (
         <FlowDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
+      )}
+      {activeTab === 'flow2' && (
+        <RawFlowDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
       )}
       {activeTab === 'temperature' && (
         <TemperatureDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
