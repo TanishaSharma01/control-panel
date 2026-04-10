@@ -46,13 +46,16 @@ export const newData = detail => document.dispatchEvent(new CustomEvent('datalog
 export const newEvent = detail => document.dispatchEvent(new CustomEvent('datalogger-new-event', { detail }))
 
 export function Datalogger({
-  series, unit, label, yBoundsRef, minYBoundsRef
+  series, hiddenSeries = {}, unit, label, yBoundsRef, minYBoundsRef
 }) {
   const seriesKeys = Array.from(Object.keys(series))
+  // allSeries includes hiddenSeries: stored and exported to CSV but not rendered on the graph
+  const allSeries = { ...series, ...hiddenSeries }
+  const allSeriesKeys = Array.from(Object.keys(allSeries))
 
   // We'll store the data in a series of arrays, one for each series
   // These arrays compute decimated min/max values in an amortized fashion
-  const store = new SeriesCollection(series)
+  const store = new SeriesCollection(allSeries)
 
   // Events are { time, label } objects rendered on the graph as a vertical dashed line with a textual label
   const events = []
@@ -62,7 +65,7 @@ export function Datalogger({
   let deferredForceUpdate = () => requestAnimationFrame(forceUpdate)
 
   document.addEventListener('datalogger-new-data', ({ detail }) => {
-    for (let key of seriesKeys) {
+    for (let key of allSeriesKeys) {
       if (key in detail) {
         store.arrays[key].push(detail.time, detail[key])
       }
@@ -229,29 +232,29 @@ export function Datalogger({
     }
 
     const downloadCSV = () => {
-      // Build CSV content with header
-      let csv = 'Timestamp (s),' + seriesKeys.join(',') + ',Valve Events\n'
-      
-      // Collect all data points from all series
+      // Build CSV content with header (includes hidden series columns)
+      let csv = 'Timestamp (s),' + allSeriesKeys.join(',') + ',Valve Events\n'
+
+      // Collect all data points from all series (including hidden)
       const dataByTime = new Map()
-      
-      seriesKeys.forEach(seriesKey => {
+
+      allSeriesKeys.forEach(seriesKey => {
         const seriesData = store.arrays[seriesKey]
         if (!seriesData || !seriesData.series) return
-        
+
         // Iterate through all segments
         seriesData.series.forEach(segment => {
           const arr = segment.arrays[0]
           if (!arr) return
-          
+
           // Extract all data points from this segment
           for (let i = 0; i < arr.chunks; i++) {
             const time = arr.time(i)
             const value = arr.mean(i)
-            
+
             if (!dataByTime.has(time)) {
               const initData = {}
-              seriesKeys.forEach(k => initData[k] = null)
+              allSeriesKeys.forEach(k => initData[k] = null)
               dataByTime.set(time, initData)
             }
             dataByTime.get(time)[seriesKey] = value
@@ -296,7 +299,7 @@ export function Datalogger({
       sortedTimes.forEach(time => {
         const data = dataByTime.get(time)
         const timestamp = (time - startTime).toFixed(3)
-        const values = seriesKeys.map(key => 
+        const values = allSeriesKeys.map(key =>
           (data[key] !== null ? data[key] : 0).toFixed(3)
         )
         
@@ -504,6 +507,14 @@ const PressureDatalogger = Datalogger({
     'ETH N2': { color: '#09f' },
     'ETH Inlet': { color: '#f90' },
   },
+  hiddenSeries: {
+    'LOX Tank V':  { color: '#000' },
+    'LOX N2 V':    { color: '#f00' },
+    'LOX Inlet V': { color: '#66f' },
+    'ETH Tank V':  { color: '#3d6' },
+    'ETH N2 V':    { color: '#09f' },
+    'ETH Inlet V': { color: '#f90' },
+  },
 })
 
 // Create flow datalogger (only LOX Flow)
@@ -517,13 +528,19 @@ const FlowDatalogger = Datalogger({
   },
 })
 
-// Create raw voltage datalogger for cryo flow sensor (no processing)
-const RawFlowDatalogger = Datalogger({
+// Voltage graph: raw voltages for all sensors, no unit conversion
+const VoltageDatalogger = Datalogger({
   unit: 'V',
-  label: 'Flow 2',
+  label: 'Voltage',
   yBoundsRef: { current: rawFlowYBounds },
   minYBoundsRef: minRawFlowYBounds,
   series: {
+    'LOX Tank V':  { color: '#000' },
+    'LOX N2 V':    { color: '#f00' },
+    'LOX Inlet V': { color: '#66f' },
+    'ETH Tank V':  { color: '#3d6' },
+    'ETH N2 V':    { color: '#09f' },
+    'ETH Inlet V': { color: '#f90' },
     'LOX Flow Raw': { color: '#8B4513' },
   },
 })
@@ -547,8 +564,8 @@ export default function GraphPanel({ state }) {
   const tabs = [
     { id: 'pressure',  label: 'Pressure Sensors',  subtitle: 'Pressure Sensors (Bar)' },
     { id: 'flow',      label: 'Flow Sensors',       subtitle: 'Flow Sensors (LPS)' },
-    { id: 'flow2',     label: 'Flow Voltage',      subtitle: 'Flow 2 - Raw Voltage (V)' },
-    { id: 'temperature', label: 'Temperature Sensors', subtitle: 'Temperature Sensors (°C)' },
+    { id: 'voltage',   label: 'Voltage Graph',     subtitle: 'Raw Voltages (V)' },
+    { id: 'temperature', label: 'Temperature Sensors', subtitle: 'Temperature (°C)' },
   ];
 
   // Instead of using a cumbersome charting library, we use JSX with SVG to declaratively
@@ -599,8 +616,8 @@ export default function GraphPanel({ state }) {
       {activeTab === 'flow' && (
         <FlowDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
       )}
-      {activeTab === 'flow2' && (
-        <RawFlowDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
+      {activeTab === 'voltage' && (
+        <VoltageDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
       )}
       {activeTab === 'temperature' && (
         <TemperatureDatalogger currentSeconds={undefOnBadRef(() => state.data.time)} />
