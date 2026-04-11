@@ -67,8 +67,8 @@ export const defaultSensorCalibration = {
     lox_cryo: {
         minFlow: 0.050472,  // LPS (was 0.80 GPM)
         maxFlow: 1.82961,   // LPS (was 29.00 GPM)
-        minVolts: 0.88,
-        maxVolts: 4.4,
+        minVolts: 0.4684,
+        maxVolts: 2.342,
         type: 'flow'
     },
     eth_temp: {
@@ -207,8 +207,8 @@ export function formatDataPoint(dict) {
         'ETH Inlet V': dict.labjacks.ETH.analog["7"],
         'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow, sensorData.lox_cryo.minVolts, sensorData.lox_cryo.maxVolts),
         'LOX Flow Raw': dict.labjacks.LOX.analog["2"],
-        'ETH Temp': (dict.labjacks.ETH.temperature ?? 0.0) + (sensorData.eth_temp.offset || 0.0),
-        'LOX Temp': (dict.labjacks.LOX.temperature ?? 0.0) + (sensorData.lox_temp.offset || 0.0),
+        'ETH Temp': dict.labjacks.ETH.temperature != null ? dict.labjacks.ETH.temperature + (sensorData.eth_temp.offset || 0.0) : NaN,
+        'LOX Temp': dict.labjacks.LOX.temperature != null ? dict.labjacks.LOX.temperature + (sensorData.lox_temp.offset || 0.0) : NaN,
     }
 }
 
