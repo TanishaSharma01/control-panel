@@ -162,7 +162,41 @@ class LabJack(LabJackBase):
             print(f"pin {pin_number}")
             sys.exit()
 
+    def _spiread8(self, sck: int, so: int) -> int:
+        """Read 8 bits from MAX6675 via SPI bit-bang, MSB first.
+        Matches MAX6675 Arduino library spiread() exactly:
+          SCK LOW -> delay -> read bit -> SCK HIGH -> delay -> repeat
+        """
+        d = 0
+        for i in range(7, -1, -1):
+            self._set_digital_state(sck, False)
+            time.sleep(0.001)                          # 1ms, matches Arduino delay(1)
+            if self._get_digital_state(so):
+                d |= (1 << i)
+            self._set_digital_state(sck, True)
+            time.sleep(0.001)
+        return d
+
+    def _read_thermocouple_once(self, sck: int, cs: int, so: int) -> float | None:
+        """Single raw read from MAX6675. Returns °C or None on fault/error."""
+        self._set_digital_state(sck, True)    # SCK idles HIGH
+        self._set_digital_state(cs, False)    # CS LOW — begin read
+        time.sleep(0.001)                      # 1ms setup delay
+
+        v = self._spiread8(sck, so)            # high byte (bits 15:8)
+        v <<= 8
+        v |= self._spiread8(sck, so)           # low byte  (bits 7:0)
+
+        self._set_digital_state(cs, True)      # CS HIGH — end read
+
+        if v & 0x4:                            # bit 2: open thermocouple fault
+            return None
+        return (v >> 3) * 0.25                 # bits 14:3 → °C at 0.25°C resolution
+
     def get_thermocouple_temp(self) -> float | None:
+        """Read temperature from MAX6675, taking median of 3 reads to reject noise spikes.
+        A single bad SPI read (from EMI or relay switching) gets outvoted by the other two.
+        """
         if not hasattr(self.config, 'Thermocouple'):
             return None
         now = time.time()
@@ -171,18 +205,14 @@ class LabJack(LabJackBase):
         tc = self.config.Thermocouple
         sck, cs, so = tc['sck'], tc['cs'], tc['so']
         try:
-            self._set_digital_state(cs, False)
-            time.sleep(0.0001)
-            raw = 0
-            for _ in range(16):
-                self._set_digital_state(sck, False)
-                time.sleep(0.000002)
-                bit = self._get_digital_state(so)
-                raw = (raw << 1) | (1 if bit else 0)
-                self._set_digital_state(sck, True)
-                time.sleep(0.000002)
-            self._set_digital_state(cs, True)
-            temp = None if (raw & 0x4) else ((raw >> 3) & 0xFFF) * 0.25
+            readings = []
+            for _ in range(3):
+                val = self._read_thermocouple_once(sck, cs, so)
+                if val is not None:
+                    readings.append(val)
+                time.sleep(0.005)              # 5ms between reads — MAX6675 needs time to settle
+
+            temp = sorted(readings)[len(readings) // 2] if readings else None
         except Exception:
             try:
                 self._set_digital_state(cs, True)
