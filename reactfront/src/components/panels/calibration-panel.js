@@ -66,7 +66,7 @@ export default function CalibrationPanel() {
         ? ['minFlow', 'maxFlow', 'minVolts', 'maxVolts']
         : (sensorKey === 'eth_temp' || sensorKey === 'lox_temp')
         ? ['offset']
-        : ['barMax', 'zero', 'span'];
+        : ['barMax', 'minVolts', 'maxVolts'];
     
     const missingFields = requiredFields.filter(field => !(field in cleanedSensor));
     
@@ -130,21 +130,21 @@ export default function CalibrationPanel() {
                         value={sensor.barMax}
                         onChange={(e) => handleUpdate(sensorKey, 'barMax', e.target.value)}
                     />
-                    
-                    <label>Zero (mA):</label>
+
+                    <label>Min Volts:</label>
                     <input
                         type="number"
-                        step="0.01"
-                        value={sensor.zero}
-                        onChange={(e) => handleUpdate(sensorKey, 'zero', e.target.value)}
+                        step="0.001"
+                        value={sensor.minVolts}
+                        onChange={(e) => handleUpdate(sensorKey, 'minVolts', e.target.value)}
                     />
-                    
-                    <label>Span (mA):</label>
+
+                    <label>Max Volts:</label>
                     <input
                         type="number"
-                        step="0.01"
-                        value={sensor.span}
-                        onChange={(e) => handleUpdate(sensorKey, 'span', e.target.value)}
+                        step="0.001"
+                        value={sensor.maxVolts}
+                        onChange={(e) => handleUpdate(sensorKey, 'maxVolts', e.target.value)}
                     />
                 </div>
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
@@ -156,9 +156,9 @@ export default function CalibrationPanel() {
                     </Button>
                 </div>
                 <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                    <strong>Defaults:</strong> barMax={defaultSensor.barMax}, 
-                    zero={defaultSensor.zero}mA, 
-                    span={defaultSensor.span}mA
+                    <strong>Defaults:</strong> barMax={defaultSensor.barMax},
+                    minVolts={defaultSensor.minVolts}V,
+                    maxVolts={defaultSensor.maxVolts}V
                 </div>
             </div>
         );

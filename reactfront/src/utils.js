@@ -1,15 +1,6 @@
-export function getBar(volts, barMax, zero, span) {
-    // volts: voltage reading from volts pin
-    // barMax: the sensor measures from 0 bar to `barMax` bar
-    // zero: current in milliamps at 0 bar
-    // span: current span (mA) from 0 bar to `barMax` bar, ie the current
-    //   at `barMax` bar is zero + span
-    // note that we use V=IR where the resistance is 120Ohm
-    // so current = volts/120
-    // (volts - zero) / span * barMax = bar
-    const resistance = 120; // ohm
-    const bar = (volts/resistance - zero/1000) / (span/1000) * barMax;
-    // const psi = bar * 14.504; // 1bar = 14.5psi
+export function getBar(volts, barMax, minVolts, maxVolts) {
+    // Linear interpolation: minVolts → 0 bar, maxVolts → barMax bar
+    const bar = (volts - minVolts) / (maxVolts - minVolts) * barMax;
     return bar;
 }
 
@@ -36,33 +27,33 @@ export function getLPS(volts, minFlow, maxFlow, minVolts = 0.0, maxVolts = 5.0) 
 export const defaultSensorCalibration = {
     eth_tank: {
         barMax: 100,
-        zero: 3.99,
-        span: 16.02,
+        minVolts: 0.48,  // 4mA × 120Ω
+        maxVolts: 2.4,  // 20mA × 120Ω
     },
     lox_tank: {
         barMax: 100,
-        zero: 3.99,
-        span: 16.04,
+        minVolts: 0.48,  // 4mA × 120Ω
+        maxVolts: 2.4,  // 20mA × 120Ω
     },
     eth_n2: {
         barMax: 250,
-        zero: 4,
-        span: 16,
+        minVolts: 0.48,  // 4mA × 120Ω
+        maxVolts: 2.4,  // 20mA × 120Ω
     },
     lox_n2: {
         barMax: 250,
-        zero: 4,
-        span: 16,
+        minVolts: 0.48,  // 4mA × 120Ω
+        maxVolts: 2.4,  // 20mA × 120Ω
     },
     lox_inlet: {
         barMax: 150,
-        zero: 3.99,
-        span: 16.04,
+        minVolts: 0.48,  // 4mA × 120Ω
+        maxVolts: 2.4,  // 20mA × 120Ω
     },
     eth_inlet: {
         barMax: 150,
-        zero: 3.99,
-        span: 16.02,
+        minVolts: 0.48,  // 4mA × 120Ω
+        maxVolts: 2.4,  // 20mA × 120Ω
     },
     lox_cryo: {
         minFlow: 0.050472,  // LPS (was 0.80 GPM)
@@ -81,12 +72,16 @@ export const defaultSensorCalibration = {
     },
 }
 
-// Load calibration from localStorage, merged with defaults so newly added sensors
-// are always present even when an older localStorage snapshot is loaded.
-export let sensorData = {
-    ...defaultSensorCalibration,
-    ...(JSON.parse(localStorage.getItem('sensorCalibration')) || {}),
-};
+// Load calibration from localStorage using a deep merge — each sensor's fields are merged
+// individually so that new default fields (e.g. minVolts/maxVolts replacing zero/span)
+// are always present even when an older localStorage snapshot exists.
+const _stored = JSON.parse(localStorage.getItem('sensorCalibration')) || {};
+export let sensorData = Object.fromEntries(
+    Object.keys(defaultSensorCalibration).map(key => [
+        key,
+        { ...defaultSensorCalibration[key], ...(_stored[key] || {}) }
+    ])
+);
 
 // Function to update and save calibration
 export function updateSensorCalibration(sensorKey, newCalibration) {
@@ -193,17 +188,17 @@ export function formatDataPoint(dict) {
         // Epoch time in fractional seconds
         time: dict.time,
         // Note: these bar max figures are also in the sensors list in control-panel.js
-        'LOX Tank': getBar(dict.labjacks.LOX.analog["4"], sensorData.lox_tank.barMax, sensorData.lox_tank.zero, sensorData.lox_tank.span),
+        'LOX Tank': getBar(dict.labjacks.LOX.analog["4"], sensorData.lox_tank.barMax, sensorData.lox_tank.minVolts, sensorData.lox_tank.maxVolts),
         'LOX Tank V': dict.labjacks.LOX.analog["4"],
-        'LOX N2': getBar(dict.labjacks.LOX.analog["5"], sensorData.lox_n2.barMax, sensorData.lox_n2.zero, sensorData.lox_n2.span),
+        'LOX N2': getBar(dict.labjacks.LOX.analog["5"], sensorData.lox_n2.barMax, sensorData.lox_n2.minVolts, sensorData.lox_n2.maxVolts),
         'LOX N2 V': dict.labjacks.LOX.analog["5"],
-        'LOX Inlet': getBar(dict.labjacks.LOX.analog["7"], sensorData.lox_inlet.barMax, sensorData.lox_inlet.zero, sensorData.lox_inlet.span),
+        'LOX Inlet': getBar(dict.labjacks.LOX.analog["7"], sensorData.lox_inlet.barMax, sensorData.lox_inlet.minVolts, sensorData.lox_inlet.maxVolts),
         'LOX Inlet V': dict.labjacks.LOX.analog["7"],
-        'ETH Tank': getBar(dict.labjacks.ETH.analog["4"], sensorData.eth_tank.barMax, sensorData.eth_tank.zero, sensorData.eth_tank.span),
+        'ETH Tank': getBar(dict.labjacks.ETH.analog["4"], sensorData.eth_tank.barMax, sensorData.eth_tank.minVolts, sensorData.eth_tank.maxVolts),
         'ETH Tank V': dict.labjacks.ETH.analog["4"],
-        'ETH N2': getBar(dict.labjacks.ETH.analog["5"], sensorData.eth_n2.barMax, sensorData.eth_n2.zero, sensorData.eth_n2.span),
+        'ETH N2': getBar(dict.labjacks.ETH.analog["5"], sensorData.eth_n2.barMax, sensorData.eth_n2.minVolts, sensorData.eth_n2.maxVolts),
         'ETH N2 V': dict.labjacks.ETH.analog["5"],
-        'ETH Inlet': getBar(dict.labjacks.ETH.analog["7"], sensorData.eth_inlet.barMax, sensorData.eth_inlet.zero, sensorData.eth_inlet.span),
+        'ETH Inlet': getBar(dict.labjacks.ETH.analog["7"], sensorData.eth_inlet.barMax, sensorData.eth_inlet.minVolts, sensorData.eth_inlet.maxVolts),
         'ETH Inlet V': dict.labjacks.ETH.analog["7"],
         'LOX Flow': getLPS(dict.labjacks.LOX.analog["2"], sensorData.lox_cryo.minFlow, sensorData.lox_cryo.maxFlow, sensorData.lox_cryo.minVolts, sensorData.lox_cryo.maxVolts),
         'LOX Flow Raw': dict.labjacks.LOX.analog["2"],

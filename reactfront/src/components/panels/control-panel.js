@@ -100,7 +100,7 @@ function ControlCard({ state, emit, sensorBatches, sensorAverages, updateSensorH
                     unit = 'LPS';
                 } else {
                     // Pressure sensor - display in Bar
-                    currentValue = getBar(volts, sensor.barMax, sensor.zero, sensor.span);
+                    currentValue = getBar(volts, sensor.barMax, sensor.minVolts, sensor.maxVolts);
                     unit = 'Bar';
                 }
             }
