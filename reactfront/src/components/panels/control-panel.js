@@ -169,7 +169,7 @@ function ControlCard({ state, emit, sensorBatches, sensorAverages, updateSensorH
             // volts = state.data.labjacks[props.test_stand]["analog"][props.labjack_pin];
             // currentValue = getLPS(volts, sensor.minFlow, sensor.maxFlow, sensor.minVolts, sensor.maxVolts);
         } else {
-            volts = state.data.labjacks[props.test_stand]["analog"][props.labjack_pin];
+            volts = state.data.labjacks[props.test_stand]?.["analog"]?.[props.labjack_pin];
             currentValue = getBar(volts, sensor.barMax, sensor.minVolts, sensor.maxVolts);
             unit = 'Bar';
         }

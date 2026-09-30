@@ -113,7 +113,7 @@
             "position": { "width": 3.5, "height": 3, "x": 22, "y": 17 }
         }, {
             "pin": {
-                "test_stand": "LOX", "labjack_pin": 6, "sensorNumber": 7,
+                "test_stand": "LOX", "labjack_pin": 2, "sensorNumber": 7,
                 "full_name": "LOX Motor Inlet Pressure", "abbrev": "lox_inlet"
             },
             "position": { "width": 3.5, "height": 3, "x": 26.5, "y": 11 }

@@ -146,11 +146,17 @@ class LabJack(LabJackBase):
         self._tc_lock = threading.Lock()
 
         if hasattr(standConfig, 'CryoFlowUART'):
+            cfg = standConfig.CryoFlowUART
+            tx = cfg['tx']
+            assert cfg['rx'] == tx + 1, \
+                f"CryoFlowUART rx={cfg['rx']} must be tx={tx}+1 - the U3 hardware UART fixes RX to the pin right after TX"
             # Enables the U3's onboard hardware UART (see section 4.1.12 of the U3
-            # datasheet). configurePins=True routes TX/RX to FIO4/FIO5 (the default
-            # offset) - get_cryo_flow_lps() just polls the resulting hardware RX buffer.
-            result = self.device.asynchConfig(UARTEnable=True, DesiredBaud=standConfig.CryoFlowUART['baud'], configurePins=True)
-            self._log(f"[CRYO] asynchConfig on {standConfig.name}: {result} (requested baud={standConfig.CryoFlowUART['baud']})")
+            # datasheet), explicitly routed via TimerCounterPinOffset=tx so it lands on
+            # whatever pin this stand's config actually specifies (TX=tx, RX=tx+1),
+            # instead of silently falling back to the library's FIO4/FIO5 default.
+            self.device.configIO(EnableUART=True, TimerCounterPinOffset=tx)
+            result = self.device.asynchConfig(UARTEnable=True, DesiredBaud=cfg['baud'], configurePins=False)
+            self._log(f"[CRYO] asynchConfig on {standConfig.name}: {result} (baud={cfg['baud']}, TX=FIO{tx}/RX=FIO{tx + 1})")
         if hasattr(standConfig, 'Thermocouple'):
             threading.Thread(target=self._thermocouple_worker, daemon=True).start()
 

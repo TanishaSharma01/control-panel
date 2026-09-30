@@ -206,12 +206,16 @@ export function formatDataPoint(dict) {
         // Epoch time in fractional seconds
         time: dict.time,
         // Note: these bar max figures are also in the sensors list in control-panel.js
-        'LOX Tank': getBar(dict.labjacks.LOX.analog["4"], sensorData.lox_tank.barMax, sensorData.lox_tank.minVolts, sensorData.lox_tank.maxVolts),
-        'LOX Tank V': dict.labjacks.LOX.analog["4"],
-        'LOX N2': getBar(dict.labjacks.LOX.analog["5"], sensorData.lox_n2.barMax, sensorData.lox_n2.minVolts, sensorData.lox_n2.maxVolts),
-        'LOX N2 V': dict.labjacks.LOX.analog["5"],
-        'LOX Inlet': getBar(dict.labjacks.LOX.analog["6"], sensorData.lox_inlet.barMax, sensorData.lox_inlet.minVolts, sensorData.lox_inlet.maxVolts),
-        'LOX Inlet V': dict.labjacks.LOX.analog["6"],
+        // LOX Tank/N2 sensors are currently unplugged (freed for the cryo UART's
+        // pins), so dict.labjacks.LOX.analog may be missing those keys - optional
+        // chaining avoids crashing formatDataPoint on every incoming state message.
+        // LOX Inlet moved from FIO6 to FIO2 (see stands.py) and is still active.
+        'LOX Tank': getBar(dict.labjacks.LOX.analog?.["4"], sensorData.lox_tank.barMax, sensorData.lox_tank.minVolts, sensorData.lox_tank.maxVolts),
+        'LOX Tank V': dict.labjacks.LOX.analog?.["4"],
+        'LOX N2': getBar(dict.labjacks.LOX.analog?.["5"], sensorData.lox_n2.barMax, sensorData.lox_n2.minVolts, sensorData.lox_n2.maxVolts),
+        'LOX N2 V': dict.labjacks.LOX.analog?.["5"],
+        'LOX Inlet': getBar(dict.labjacks.LOX.analog?.["2"], sensorData.lox_inlet.barMax, sensorData.lox_inlet.minVolts, sensorData.lox_inlet.maxVolts),
+        'LOX Inlet V': dict.labjacks.LOX.analog?.["2"],
         'ETH Tank': getBar(dict.labjacks.ETH.analog["4"], sensorData.eth_tank.barMax, sensorData.eth_tank.minVolts, sensorData.eth_tank.maxVolts),
         'ETH Tank V': dict.labjacks.ETH.analog["4"],
         'ETH N2': getBar(dict.labjacks.ETH.analog["5"], sensorData.eth_n2.barMax, sensorData.eth_n2.minVolts, sensorData.eth_n2.maxVolts),
