@@ -3,7 +3,7 @@ import { Panel } from '../index';
 import { sensorData, updateSensorCalibration, resetSensorCalibration, defaultSensorCalibration } from '../../utils';
 import { Button } from '@material-ui/core';
 
-export default function CalibrationPanel() {
+export default function CalibrationPanel({ state, emit }) {
     const [calibration, setCalibration] = useState({ ...sensorData });
     const [selectedSensor, setSelectedSensor] = useState('eth_tank');
 
@@ -107,10 +107,7 @@ export default function CalibrationPanel() {
         { key: 'lox_n2', name: 'LOX N2 Pressure' },
         { key: 'eth_inlet', name: 'ETH Motor Inlet Pressure' },
         { key: 'lox_inlet', name: 'LOX Motor Inlet Pressure' },
-        // OLD: lox_cryo used to need voltage calibration here when it was analog 4-20mA.
-        // Now the microcontroller computes L/s and streams it over UART, so there's
-        // nothing left to calibrate on this panel — kept commented out for reference.
-        // { key: 'lox_cryo', name: 'LOX Cryo Flow' },
+        { key: 'lox_cryo', name: 'LOX Cryo Flow' },
         { key: 'eth_temp', name: 'ETH Temperature' },
         { key: 'lox_temp', name: 'LOX Temperature' },
         { key: 'eth_load_cell', name: 'ETH Load Cell' },
@@ -171,56 +168,32 @@ export default function CalibrationPanel() {
     };
 
     const renderFlowSensor = (sensorKey) => {
-        const sensor = calibration[sensorKey];
-        const defaultSensor = defaultSensorCalibration[sensorKey];
-        
+        // The microcontroller computes L/s itself and streams it over UART, so there's
+        // no voltage calibration to do here - this card is remote control instead:
+        // sending single-character commands to the microcontroller over the same UART's
+        // TX line (see LabJack.send_cryo_command / server.py's CRYOCOMMAND handler).
+        const stand = 'LOX';
+        const testModeOn = !!(state?.data?.cryo_test_mode && state.data.cryo_test_mode[stand]);
+
         return (
             <div style={{ padding: '10px', border: '1px solid #ccc', marginBottom: '10px' }}>
                 <h3>{getSensorName(sensorKey)}</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '150px 150px', gap: '10px' }}>
-                    <label>Min Flow (LPS):</label>
-                    <input
-                        type="number"
-                        step="0.001"
-                        value={sensor.minFlow}
-                        onChange={(e) => handleUpdate(sensorKey, 'minFlow', e.target.value)}
-                    />
-                    
-                    <label>Max Flow (LPS):</label>
-                    <input
-                        type="number"
-                        step="0.001"
-                        value={sensor.maxFlow}
-                        onChange={(e) => handleUpdate(sensorKey, 'maxFlow', e.target.value)}
-                    />
-                    
-                    <label>Min Volts:</label>
-                    <input
-                        type="number"
-                        step="0.1"
-                        value={sensor.minVolts}
-                        onChange={(e) => handleUpdate(sensorKey, 'minVolts', e.target.value)}
-                    />
-                    
-                    <label>Max Volts:</label>
-                    <input
-                        type="number"
-                        step="0.1"
-                        value={sensor.maxVolts}
-                        onChange={(e) => handleUpdate(sensorKey, 'maxVolts', e.target.value)}
-                    />
-                </div>
-                <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-                    <Button variant="contained" color="primary" onClick={() => handleSave(sensorKey)}>
-                        Save
-                    </Button>
-                    <Button variant="contained" onClick={() => handleReset(sensorKey)}>
-                        Reset to Default
+                <p style={{ fontSize: '13px', color: '#555', marginTop: 0 }}>
+                    Reads a pre-computed L/s value streamed over UART by the flow meter's
+                    microcontroller. Sends single-character
+                    commands to that microcontroller over the same UART's TX line.
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Button
+                        variant="contained"
+                        color={testModeOn ? 'secondary' : 'primary'}
+                        onClick={() => emit('CRYOCOMMAND', { stand, command: 't' })}
+                    >
+                        Test Mode: {testModeOn ? 'ON' : 'OFF'}
                     </Button>
                 </div>
                 <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                    <strong>Defaults:</strong> minFlow={defaultSensor.minFlow.toFixed(6)}LPS, 
-                    maxFlow={defaultSensor.maxFlow.toFixed(6)}LPS, 
+                    Sends 't' to toggle the microcontroller's test mode.
                 </div>
             </div>
         );

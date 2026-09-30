@@ -207,7 +207,7 @@ class App extends React.Component {
                 </div>
               )}
               {this.state.activePanel === 'sequence' && <Sequences state={this.state} emit={this.emit} />}
-              {this.state.activePanel === 'calibration' && <CalibrationPanel />}
+              {this.state.activePanel === 'calibration' && <CalibrationPanel state={this.state} emit={this.emit} />}
             </div>
             <GraphPanel state={this.state} emit={this.emit} />
           </div>
