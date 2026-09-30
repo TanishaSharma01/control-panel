@@ -32,10 +32,11 @@ class LOX:
 
     LightStand = LightStand('LOX')
 
-    # N2Sensor/LOXSensor were on FIO5/FIO4 - unplugged, no longer needed there now
-    # that the UART (see CryoFlowUART below) has moved to FIO6/FIO7 instead.
+    # N2Sensor is still unplugged - FIO5 is free if it gets wired back up later.
     # N2Sensor = ('LOX', 5)
-    # LOXSensor = ('LOX', 4)
+    # LOXSensor restored onto FIO4, since that pin is free (the UART only claimed
+    # FIO6/FIO7, not FIO4/FIO5 - see CryoFlowUART below).
+    LOXSensor = ('LOX', 4)
     # OLD: analog 4-20mA cryo flow sensor, replaced by UART below
     # CryoFlowSensor = ('LOX', 2)  # New cryogenic flow sensor
     # InletPressureSensor moved from FIO6 to FIO2 (the old, now-unused analog cryo
@@ -44,7 +45,7 @@ class LOX:
     # match (labjack_pin duplicated there for the frontend).
     InletPressureSensor = ('LOX', 2)
     # OLD: Sensors = [N2Sensor[1], LOXSensor[1], CryoFlowSensor[1], InletPressureSensor[1]]
-    Sensors = [InletPressureSensor[1]]
+    Sensors = [LOXSensor[1], InletPressureSensor[1]]
 
     # Cryo flow meter — microcontroller reads the PT420 and streams CSV lines
     # (timestamp_ms,freq_Hz,filtered_Hz,L_per_s) over the U3's onboard hardware UART

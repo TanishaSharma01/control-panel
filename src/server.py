@@ -537,26 +537,26 @@ class ControlPanelServer:
             'effect': lambda: x._set_digital_state(lightStand.yellow[1], cycle),
           },
           {
-            # LOX.Sensors[1] was LOXSensor (tank pressure), used here to drive the red
-            # warning light. LOXSensor is currently unplugged (see stands.py), so
-            # LOX.Sensors may not have a 2nd entry - guard with len() first so these
-            # conditions just no-op instead of crashing this entire background task
-            # (which previously killed green/yellow/buzzer for BOTH stands too, since
-            # they're all driven from this same loop).
-            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) < 0.52,
+            # Drives the red warning light from LOX tank pressure (LOXSensor). Reads it
+            # by name (hasattr/getattr), not by position in LOX.Sensors - a positional
+            # index (LOX.Sensors[1]) broke twice already: once by IndexError when
+            # LOXSensor was temporarily removed from the list, and again silently (would
+            # have started reading a different sensor entirely) when it was restored at
+            # a different list position. Name-based lookup can't have either failure mode.
+            'condition': lambda: hasattr(LOX, 'LOXSensor') and x.get_voltage(LOX.LOXSensor[1]) < 0.52,
             'effect': lambda: x._set_digital_state(lightStand.red[1], False),
           },
           {
-            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) > 0.52 and
-                                 x.get_voltage(LOX.Sensors[1]) < 1.47, #0.52v ~= 2atm
+            'condition': lambda: hasattr(LOX, 'LOXSensor') and x.get_voltage(LOX.LOXSensor[1]) > 0.52 and
+                                 x.get_voltage(LOX.LOXSensor[1]) < 1.47, #0.52v ~= 2atm
             'effect': lambda: x._set_digital_state(lightStand.red[1], True),
           },
           {
-            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) > 1.47, #1.47v ~= 600psi
+            'condition': lambda: hasattr(LOX, 'LOXSensor') and x.get_voltage(LOX.LOXSensor[1]) > 1.47, #1.47v ~= 600psi
             'effect': lambda: x._set_digital_state(lightStand.red[1], cycle),
           },
           {
-            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) > 1.47, #1.47v ~= 600psi
+            'condition': lambda: hasattr(LOX, 'LOXSensor') and x.get_voltage(LOX.LOXSensor[1]) > 1.47, #1.47v ~= 600psi
             'effect': lambda: x._set_digital_state(lightStand.red[1], cycle),
           },
           {
