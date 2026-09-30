@@ -43,6 +43,10 @@ class LabJackBase(metaclass=ABCMeta):
     def get_cryo_flow_lps(self) -> float | None:
         pass
 
+    @abstractmethod
+    def send_cryo_command(self, char: str) -> bool:
+        pass
+
     def open_valve(self, pin_number: int):
         self.set_valve_state(pin_number, True)
 
@@ -329,6 +333,25 @@ class LabJack(LabJackBase):
 
         return self._cryo_cache
 
+    def send_cryo_command(self, char: str) -> bool:
+        """
+        Sends a single command character to the cryo flow meter's microcontroller over
+        the U3's onboard hardware UART TX line (the same peripheral get_cryo_flow_lps
+        reads from - see asynchConfig in __init__). e.g. the microcontroller's firmware
+        treats 't' as a test-mode toggle. Uses asynchTX, the write counterpart to
+        asynchRX - also a single fast USB call, not a blocking bit-bang send.
+        """
+        if not hasattr(self.config, 'CryoFlowUART'):
+            return False
+        try:
+            with self._device_lock:
+                self.device.asynchTX([ord(char)])
+            self._log(f"[CRYO] {self.config.name}: sent command {char!r}")
+            return True
+        except Exception:
+            self._log(f"[CRYO] {self.config.name}: error sending command {char!r}:\n{format_exc()}")
+            return False
+
 class LabJackFake(LabJackBase):
     """
     FAKE LabJack class for mock testing when you don't have access to a real LabJack. Mirrors the LabJack class interface.
@@ -340,6 +363,7 @@ class LabJackFake(LabJackBase):
         self.digital_pins = standConfig.Valves
         self.analog_inputs = standConfig.Sensors
         self.light_stand_pins = standConfig.LightStand.LightStand
+        self._log = log_callback
         self.serial_number = standConfig.SerialNumber
         self.state = {
             "digital": {},
@@ -385,3 +409,9 @@ class LabJackFake(LabJackBase):
         if not hasattr(self.config, 'CryoFlowUART'):
             return None
         return round(0.9 + math.sin(time.time() / 5 + self.serial_number) * 0.5, 4)
+
+    def send_cryo_command(self, char: str) -> bool:
+        if not hasattr(self.config, 'CryoFlowUART'):
+            return False
+        self._log(f"[CRYO] {self.config.name}: (fake) would send command {char!r}")
+        return True

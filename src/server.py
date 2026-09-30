@@ -74,6 +74,11 @@ class SystemState:
     # in a live log panel on the frontend for debugging without needing terminal access
     # to the Pi. Capped in ControlPanelServer.log_debug() so this can't grow unbounded.
     debug_log: list[str] = field(default_factory=list)
+    # Best-effort belief about whether each stand's cryo flow sensor is in test mode,
+    # toggled locally whenever a 't' command is sent (see CRYOCOMMAND). The microcontroller
+    # doesn't send an acknowledgement back, so this can desync if a command is ever missed -
+    # it's a UI hint, not a guaranteed reflection of the microcontroller's real state.
+    cryo_test_mode: dict[str, bool] = field(default_factory=dict)
     # LabJack sensor data - state['LOX']['analog'][pin_no] is a voltage for instance
     # Note this is not necessarily up-to-date: it's computed from LabJack.get_state()
     # before sending this entire object as JSON to the client
@@ -479,6 +484,23 @@ class ControlPanelServer:
             case ClientCommandString.GETSEQUENCE:
                 content = await self.get_sequence_content(data)
                 await self.emit(ws, 'SEQUENCE_CONTENT', {'name': data, 'content': content})
+
+            case ClientCommandString.CRYOCOMMAND:
+                # data = {"stand": "LOX", "command": "t"} - sends a single character to
+                # that stand's cryo flow meter microcontroller over the UART TX line (see
+                # LabJack.send_cryo_command). Not gated on arming_switch: this only talks
+                # to a sensor's firmware, it doesn't actuate any valve/igniter.
+                stand_name = data.get('stand')
+                char = data.get('command')
+                lj = self.labjacks.get(stand_name)
+                if not lj or not hasattr(lj.config, 'CryoFlowUART'):
+                    self.push_warning(f"No cryo flow UART configured for stand: {stand_name}")
+                else:
+                    success = lj.send_cryo_command(char)
+                    if success and char == 't':
+                        self.state.cryo_test_mode[stand_name] = not self.state.cryo_test_mode.get(stand_name, False)
+                    elif not success:
+                        self.push_warning(f"Failed to send cryo command {char!r} to {stand_name}")
 
             case _:
                 self.push_warning(f"Unknown command: {header}")
