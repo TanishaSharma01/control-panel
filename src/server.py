@@ -515,20 +515,26 @@ class ControlPanelServer:
             'effect': lambda: x._set_digital_state(lightStand.yellow[1], cycle),
           },
           {
-            'condition': lambda: x.get_voltage(LOX.Sensors[1]) < 0.52,
+            # LOX.Sensors[1] was LOXSensor (tank pressure), used here to drive the red
+            # warning light. LOXSensor is currently unplugged (see stands.py), so
+            # LOX.Sensors may not have a 2nd entry - guard with len() first so these
+            # conditions just no-op instead of crashing this entire background task
+            # (which previously killed green/yellow/buzzer for BOTH stands too, since
+            # they're all driven from this same loop).
+            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) < 0.52,
             'effect': lambda: x._set_digital_state(lightStand.red[1], False),
           },
           {
-            'condition': lambda: x.get_voltage(LOX.Sensors[1]) > 0.52 and
-                                 x.get_voltage(LOX.Sensors[1]) < 1.47, #0.52v ~= 2atm 
+            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) > 0.52 and
+                                 x.get_voltage(LOX.Sensors[1]) < 1.47, #0.52v ~= 2atm
             'effect': lambda: x._set_digital_state(lightStand.red[1], True),
           },
           {
-            'condition': lambda: x.get_voltage(LOX.Sensors[1]) > 1.47, #1.47v ~= 600psi
+            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) > 1.47, #1.47v ~= 600psi
             'effect': lambda: x._set_digital_state(lightStand.red[1], cycle),
           },
           {
-            'condition': lambda: x.get_voltage(LOX.Sensors[1]) > 1.47, #1.47v ~= 600psi
+            'condition': lambda: len(LOX.Sensors) > 1 and x.get_voltage(LOX.Sensors[1]) > 1.47, #1.47v ~= 600psi
             'effect': lambda: x._set_digital_state(lightStand.red[1], cycle),
           },
           {
