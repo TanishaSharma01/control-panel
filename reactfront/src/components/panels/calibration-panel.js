@@ -67,7 +67,7 @@ export default function CalibrationPanel() {
     const requiredFields = (sensorKey === 'eth_temp' || sensorKey === 'lox_temp')
         ? ['offset']
         : sensorKey === 'eth_load_cell'
-        ? ['supplyVoltage', 'calibrationVoltage']
+        ? ['fullRange', 'zeroVoltage', 'maxVoltage']
         : ['barMax', 'minVolts', 'maxVolts'];
     
     const missingFields = requiredFields.filter(field => !(field in cleanedSensor));
@@ -268,25 +268,33 @@ export default function CalibrationPanel() {
             <div style={{ padding: '10px', border: '1px solid #ccc', marginBottom: '10px' }}>
                 <h3>ETH Load Cell</h3>
                 <p style={{ fontSize: '13px', color: '#555', marginTop: 0 }}>
-                    Voltage is read from FIO0 on the ETH LabJack.
-                    Set Supply V to match your excitation voltage.
-                    Set Cal V to the FIO0 voltage reading with no load applied (zero point).
+                    Voltage is read from FIO0 on the ETH LabJack. Set Zero Voltage to the FIO0
+                    reading with no load applied, and Max Voltage to the FIO0 reading with a
+                    known reference weight (Full Range) applied.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '180px 150px', gap: '10px' }}>
-                    <label>Supply Voltage (V):</label>
+                    <label>Full Range (kg):</label>
                     <input
                         type="number"
                         step="0.1"
-                        value={sensor.supplyVoltage}
-                        onChange={(e) => handleUpdate(sensorKey, 'supplyVoltage', e.target.value)}
+                        value={sensor.fullRange}
+                        onChange={(e) => handleUpdate(sensorKey, 'fullRange', e.target.value)}
                     />
 
-                    <label>Calibration Voltage (V):</label>
+                    <label>Zero Voltage (V):</label>
                     <input
                         type="number"
                         step="0.001"
-                        value={sensor.calibrationVoltage}
-                        onChange={(e) => handleUpdate(sensorKey, 'calibrationVoltage', e.target.value)}
+                        value={sensor.zeroVoltage}
+                        onChange={(e) => handleUpdate(sensorKey, 'zeroVoltage', e.target.value)}
+                    />
+
+                    <label>Max Voltage (V):</label>
+                    <input
+                        type="number"
+                        step="0.001"
+                        value={sensor.maxVoltage}
+                        onChange={(e) => handleUpdate(sensorKey, 'maxVoltage', e.target.value)}
                     />
                 </div>
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
@@ -298,12 +306,13 @@ export default function CalibrationPanel() {
                     </Button>
                 </div>
                 <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                    <strong>Defaults:</strong> supplyVoltage={defaultSensor.supplyVoltage}V,
-                    calibrationVoltage={defaultSensor.calibrationVoltage}V
+                    <strong>Defaults:</strong> fullRange={defaultSensor.fullRange}kg,
+                    zeroVoltage={defaultSensor.zeroVoltage}V,
+                    maxVoltage={defaultSensor.maxVoltage}V
                 </div>
                 <div style={{ marginTop: '8px', fontSize: '12px', color: '#888' }}>
-                    <strong>Formula:</strong> sensitivity = (supplyV × 2 × 201) / 1500 mV/kg
-                    &nbsp;→&nbsp; weight = (calV − FIO0) × 1000 / sensitivity
+                    <strong>Formula:</strong> kg per mV = fullRange / (maxVoltage − zeroVoltage)
+                    &nbsp;→&nbsp; weight = (FIO0 − zeroVoltage) × kg per mV
                 </div>
             </div>
         );

@@ -158,7 +158,7 @@ function ControlCard({ state, emit, sensorBatches, sensorAverages, updateSensorH
             const b = state.data.labjacks[props.test_stand]?.["analog"]?.[props.labjack_pin];
             if (b !== undefined) {
                 volts = b;
-                currentValue = getLoadCellKg(b, sensor.supplyVoltage, sensor.calibrationVoltage);
+                currentValue = getLoadCellKg(b, sensor.fullRange, sensor.zeroVoltage, sensor.maxVoltage);
             }
             unit = 'kg';
         } else if (sensor.type === 'flow') {

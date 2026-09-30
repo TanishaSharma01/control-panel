@@ -13,15 +13,13 @@ export function getBar(volts, barMax, minVolts, maxVolts) {
 //     return Math.max(0, gpm); // Don't allow negative flow
 // }
 
-// Convert load cell voltage to weight in kg
-// x = supplyVoltage (Volts) — adjustable, set to match your supply
-// a = calibrationVoltage (Volts) — adjustable, measured voltage at zero load
-// b = measuredVoltage (Volts) — live reading from FIO0
-// Step 1: y = (x * 2 * 201) / 1500   → sensitivity in mV/kg
-// Step 2: c = ((a - b) * 1000) / y   → weight in kg
-export function getLoadCellKg(b, supplyVoltage, calibrationVoltage) {
-    const y = (supplyVoltage * 2 * 201) / 1500;   // mV/kg sensitivity
-    return ((calibrationVoltage - b) * 1000) / y;  // kg
+// Convert load cell voltage to weight in kg - two-point linear calibration, same
+// shape as getBar() for pressure sensors: measure voltage at zero load and at a
+// known reference weight, then interpolate between them. No dependency on the
+// amplifier's internal gain, unlike the old single-point formula this replaced.
+export function getLoadCellKg(volts, fullRange, zeroVoltage, maxVoltage) {
+    const kg = (volts - zeroVoltage) / (maxVoltage - zeroVoltage) * fullRange;
+    return kg;
 }
 
 // Convert voltage to flow rate in LPS (Litres Per Second) for flow sensors
@@ -85,8 +83,9 @@ export const defaultSensorCalibration = {
     },
     eth_load_cell: {
         type: 'force',
-        supplyVoltage: 5.0,       // x — supply voltage in Volts
-        calibrationVoltage: 0.0,  // a — measured voltage from FIO0 at zero load
+        fullRange: 100,     // kg at the reference calibration weight - placeholder, needs a real calibration weight to set accurately
+        zeroVoltage: 0.0,   // measured voltage from FIO0 at zero load
+        maxVoltage: 5.0,    // measured voltage from FIO0 at the fullRange calibration weight
     },
 }
 
@@ -230,7 +229,7 @@ export function formatDataPoint(dict) {
         'ETH Temp': dict.labjacks.ETH.temperature != null ? dict.labjacks.ETH.temperature + (sensorData.eth_temp.offset || 0.0) : NaN,
         'LOX Temp': dict.labjacks.LOX.temperature != null ? dict.labjacks.LOX.temperature + (sensorData.lox_temp.offset || 0.0) : NaN,
         'ETH Load Cell': dict.labjacks.ETH.analog?.["0"] !== undefined
-            ? getLoadCellKg(dict.labjacks.ETH.analog["0"], sensorData.eth_load_cell.supplyVoltage, sensorData.eth_load_cell.calibrationVoltage)
+            ? getLoadCellKg(dict.labjacks.ETH.analog["0"], sensorData.eth_load_cell.fullRange, sensorData.eth_load_cell.zeroVoltage, sensorData.eth_load_cell.maxVoltage)
             : NaN,
         'ETH Load Cell V': dict.labjacks.ETH.analog?.["0"] ?? NaN,
     }
